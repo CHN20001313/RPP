@@ -6,12 +6,12 @@ st.title("ACS Hemodynamic Risk Calculator")
 st.markdown("Cross-Physiological RPP Risk Stratification Tool")
 
 # ===========================
-# 真实中位数阈值（替换为论文数据）
+# 真实中位数阈值
 # ===========================
-MEDIAN_RPP_REST = 10500
-MEDIAN_RPP_PEAK = 21000
-MEDIAN_HGI = 0.9
-MEDIAN_RPP_MET = 4500
+MEDIAN_RPP_REST = 10625
+MEDIAN_RPP_PEAK = 21546
+MEDIAN_HGI = 0.9675
+MEDIAN_RPP_MET = 4606
 
 # ===========================
 # 左侧输入区域
@@ -77,18 +77,27 @@ if calculate:
     if HR_peak > 0 and SBP_peak > 0:
 
         RPP_peak = HR_peak * SBP_peak
-        HGI = (RPP_peak - RPP_rest) / RPP_rest
 
         st.header("Exercise State Assessment")
 
-        col1, col2 = st.columns(2)
-        col1.metric("RPP peak", f"{RPP_peak:.0f}")
-        col2.metric("Hemodynamic Gain Index (HGI)", f"{HGI:.2f}")
+        st.metric("RPP peak", f"{RPP_peak:.0f}")
 
-        if HGI >= MEDIAN_HGI:
-            st.success("High HGI → Favorable circulatory reserve")
+        #  先做 RPPpeak 独立分层
+        if RPP_peak >= MEDIAN_RPP_PEAK:
+            st.success("High RPP peak → Lower mortality risk")
         else:
-            st.warning("Low HGI → Impaired hemodynamic gain")
+            st.warning("Low RPP peak → Higher mortality risk")
+
+        # 如果有静息数据，再计算 HGI
+        if RPP_rest > 0:
+            HGI = (RPP_peak - RPP_rest) / RPP_rest
+
+            st.metric("Hemodynamic Gain Index (HGI)", f"{HGI:.2f}")
+
+            if HGI >= MEDIAN_HGI:
+                st.success("High HGI → Favorable circulatory reserve")
+            else:
+                st.warning("Low HGI → Impaired hemodynamic gain")
 
         # ===========================
         # 体能校正分析
