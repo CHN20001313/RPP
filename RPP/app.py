@@ -41,13 +41,6 @@ calculate = st.sidebar.button("Calculate Risk Stratification")
 if calculate:
 
     # ---------------------------
-    # 基础输入检查
-    # ---------------------------
-    if HR_rest <= 0 or SBP_rest <= 0:
-        st.error("Please enter resting HR and SBP.")
-        st.stop()
-
-    # ---------------------------
     # MET 与 VO2 逻辑检查
     # ---------------------------
     if MET_peak > 0 and VO2_peak > 0:
@@ -61,15 +54,17 @@ if calculate:
     # ===========================
     # 静息状态
     # ===========================
-    RPP_rest = HR_rest * SBP_rest
+    if HR_rest > 0 and SBP_rest > 0:
 
-    st.header("Resting State Assessment")
-    st.metric("RPP rest", f"{RPP_rest:.0f}")
+        RPP_rest = HR_rest * SBP_rest
 
-    if RPP_rest >= MEDIAN_RPP_REST:
-        st.warning("High resting RPP → Higher residual risk")
-    else:
-        st.success("Low resting RPP → Lower residual risk")
+        st.header("Resting State Assessment")
+        st.metric("RPP rest", f"{RPP_rest:.0f}")
+
+        if RPP_rest >= MEDIAN_RPP_REST:
+            st.warning("High resting RPP → Higher residual risk")
+        else:
+            st.success("Low resting RPP → Lower residual risk")
 
     # ===========================
     # 运动状态
@@ -79,17 +74,16 @@ if calculate:
         RPP_peak = HR_peak * SBP_peak
 
         st.header("Exercise State Assessment")
-
         st.metric("RPP peak", f"{RPP_peak:.0f}")
 
-        #  先做 RPPpeak 独立分层
         if RPP_peak >= MEDIAN_RPP_PEAK:
             st.success("High RPP peak → Lower mortality risk")
         else:
             st.warning("Low RPP peak → Higher mortality risk")
 
-        # 如果有静息数据，再计算 HGI
-        if RPP_rest > 0:
+        # 如果同时有静息数据 → 计算 HGI
+        if HR_rest > 0 and SBP_rest > 0:
+            RPP_rest = HR_rest * SBP_rest
             HGI = (RPP_peak - RPP_rest) / RPP_rest
 
             st.metric("Hemodynamic Gain Index (HGI)", f"{HGI:.2f}")
@@ -114,20 +108,19 @@ if calculate:
             else:
                 st.success("Efficient workload response → Lower risk")
 
-            # ===========================
-            # 联合风险模式
-            # ===========================
-            st.header("Combined Risk Pattern")
+            # 联合模式（需要HGI）
+            if HR_rest > 0 and SBP_rest > 0:
+                HGI = (RPP_peak - RPP_rest) / RPP_rest
 
-            if HGI >= MEDIAN_HGI and RPP_MET < MEDIAN_RPP_MET:
-                st.success("Best Profile: High HGI + Low RPP/MET")
-            elif HGI < MEDIAN_HGI and RPP_MET >= MEDIAN_RPP_MET:
-                st.error("Highest Risk Profile: Low HGI + High RPP/MET")
-            else:
-                st.info("Intermediate Risk Profile")
+                st.header("Combined Risk Pattern")
 
-        else:
-            st.info("Enter METpeak or VO₂peak to unlock fitness-adjusted analysis.")
+                if HGI >= MEDIAN_HGI and RPP_MET < MEDIAN_RPP_MET:
+                    st.success("Best Profile: High HGI + Low RPP/MET")
+                elif HGI < MEDIAN_HGI and RPP_MET >= MEDIAN_RPP_MET:
+                    st.error("Highest Risk Profile: Low HGI + High RPP/MET")
+                else:
+                    st.info("Intermediate Risk Profile")
 
-    else:
-        st.info("Enter peak HR and SBP to unlock exercise-state assessment.")
+    # 如果什么都没输入
+    if not ((HR_rest > 0 and SBP_rest > 0) or (HR_peak > 0 and SBP_peak > 0)):
+        st.error("Please enter at least resting or peak HR and SBP.")
